@@ -4,6 +4,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var crypto = require('crypto');
 var wasmcurves = require('wasmcurves');
+var base64 = require('base64-js');
 var os = require('os');
 var Worker = require('web-worker');
 var wasmbuilder = require('wasmbuilder');
@@ -11,6 +12,7 @@ var wasmbuilder = require('wasmbuilder');
 function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
 var crypto__default = /*#__PURE__*/_interopDefaultLegacy(crypto);
+var base64__default = /*#__PURE__*/_interopDefaultLegacy(base64);
 var os__default = /*#__PURE__*/_interopDefaultLegacy(os);
 var Worker__default = /*#__PURE__*/_interopDefaultLegacy(Worker);
 
@@ -4374,24 +4376,6 @@ function thread(self) {
 }
 
 /* global navigator, WebAssembly */
-/*
-    Copyright 2019 0KIMS association.
-
-    This file is part of wasmsnark (Web Assembly zkSnark Prover).
-
-    wasmsnark is a free software: you can redistribute it and/or modify it
-    under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    wasmsnark is distributed in the hope that it will be useful, but WITHOUT
-    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
-    License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with wasmsnark. If not, see <https://www.gnu.org/licenses/>.
-*/
 
 // const MEM_SIZE = 1000;  // Memory size in 64K Pakes (512Mb)
 const MEM_SIZE = 25;  // Memory size in 64K Pakes (1600Kb)
@@ -4483,7 +4467,21 @@ async function buildThreadManager(wasm, singleThread) {
 
         for (let i = 0; i<concurrency; i++) {
 
-            tm.workers[i] = new Worker__default["default"](workerSource);
+            let base64Encoded = workerSource.split(",")[1];
+
+            // Check if the length of the string is a multiple of 4
+            if (base64Encoded.length % 4 !== 0) {
+                // Add padding to the base64-encoded string
+                const padding = '='.repeat(4 - (base64Encoded.length % 4));
+                base64Encoded += padding;
+            }
+            const binaryString = base64__default["default"].toByteArray(base64Encoded);
+
+            const workerBlob = new Blob([binaryString], { type: 'application/javascript' });
+
+            const workerUrl = URL.createObjectURL(workerBlob);
+
+            tm.workers[i] = new Worker__default["default"](workerUrl);
 
             tm.workers[i].addEventListener("message", getOnMsg(i));
 

@@ -17,6 +17,7 @@
     You should have received a copy of the GNU General Public License
     along with wasmsnark. If not, see <https://www.gnu.org/licenses/>.
 */
+import base64 from "base64-js";
 
 // const MEM_SIZE = 1000;  // Memory size in 64K Pakes (512Mb)
 const MEM_SIZE = 25;  // Memory size in 64K Pakes (1600Kb)
@@ -113,7 +114,21 @@ export default async function buildThreadManager(wasm, singleThread) {
 
         for (let i = 0; i<concurrency; i++) {
 
-            tm.workers[i] = new Worker(workerSource);
+            let base64Encoded = workerSource.split(",")[1];
+
+            // Check if the length of the string is a multiple of 4
+            if (base64Encoded.length % 4 !== 0) {
+                // Add padding to the base64-encoded string
+                const padding = '='.repeat(4 - (base64Encoded.length % 4));
+                base64Encoded += padding;
+            }
+            const binaryString = base64.toByteArray(base64Encoded);
+
+            const workerBlob = new Blob([binaryString], { type: 'application/javascript' });
+
+            const workerUrl = URL.createObjectURL(workerBlob);
+
+            tm.workers[i] = new Worker(workerUrl);
 
             tm.workers[i].addEventListener("message", getOnMsg(i));
 
